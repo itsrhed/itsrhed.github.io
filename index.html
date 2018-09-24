@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Place Searches</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.css">
+    <link rel="stylesheet" href="assets/css/style.css"/>
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.js"></script>
+    <script>
+
+      var map;
+      var infowindow = null;
+      var circle;
+      var bounds;
+      var places = [];
+      var markerCt;
+      var markerCenter;
+      var marker = [];
+
+      function initMap(){
+        places = [];
+        var
+        cebu = new google.maps.LatLng(10.3157, 123.8854),
+        latLngCMarker = new google.maps.LatLng(10.3157, 123.8854);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: cebu,
+          zoom: 15,
+          mapTypeControl: false
+        });
+
+
+        infowindow = new google.maps.InfoWindow();
+
+        var keyword = null;
+        var service;
+
+        service = new google.maps.places.PlacesService(map);
+        service.nearbySearch({
+          location: cebu,
+          radius: 3000,
+          type: ['restaurant'],
+          keyword: ['food','restaurant'],
+        }, callback);
+
+
+        circle = new google.maps.Circle({
+            map: map,
+            clickable: false,
+            // metres
+            radius: 500,
+            fillColor: '#fff',
+            fillOpacity: .6,
+            strokeColor: '#313131',
+            strokeOpacity: .4,
+            strokeWeight: .8
+        });
+
+        markerCenter = new google.maps.Marker({
+            position: latLngCMarker,
+            icon:{
+              url: 'assets/img/person.png',
+              scaledSize: new google.maps.Size(60, 60)
+            },
+            map: map,
+            draggable: true
+        });
+
+
+
+        // attach circle to marker
+       circle.bindTo('center', markerCenter, 'position');
+
+       bounds = circle.getBounds();
+
+        google.maps.event.addListener(markerCenter, 'dragend', function() {
+          latLngCenter = new google.maps.LatLng(markerCenter.position.lat(), markerCenter.position.lng());
+          markerCt = 0;
+          $('div.placeList').find('*').not('.header').not('.input').not('.icon').not('#filter').not('br').remove();
+             for (var i = 0; i < places.length; i++) {
+              countMarkers(places[i]);
+             }
+          infowindow.setContent(markerCt + ' Restaurants are here');
+          infowindow.open(map, this);
+        });
+
+
+      //routes
+      new AutocompleteDirectionsHandler(map);
+
+
+      }
+
+      function filterMarkers(keyword) {
+        places = [];
+        $('div.placeList').find('*').not('.header').not('.input').not('.icon').not('#filter').not('br').remove();
+        var
+        cebu = new google.maps.LatLng(10.3157, 123.8854),
+        latLngCMarker = new google.maps.LatLng(10.3157, 123.8854);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: cebu,
+          zoom: 15,
+          mapTypeControl: false
+        });
+
+        infowindow = new google.maps.InfoWindow();
+
+        var service = new google.maps.places.PlacesService(map);
+        var types = keyword.split(' ');
+        service.nearbySearch({
+          location: cebu,
+          radius: 3000,
+          type: ['restaurant'],
+          keyword: types,
+        }, callback);
+
+        circle = new google.maps.Circle({
+            map: map,
+            clickable: false,
+            // metres
+            radius: 500,
+            fillColor: '#fff',
+            fillOpacity: .6,
+            strokeColor: '#313131',
+            strokeOpacity: .4,
+            strokeWeight: .8
+        });
+
+        markerCenter = new google.maps.Marker({
+            position: latLngCMarker,
+            icon:{
+              url: 'assets/img/person.png',
+              scaledSize: new google.maps.Size(60, 60)
+            },
+            map: map,
+            draggable: true
+        });
+
+
+        // attach circle to marker
+       circle.bindTo('center', markerCenter, 'position');
+
+       bounds = circle.getBounds();
+
+        google.maps.event.addListener(markerCenter, 'dragend', function() {
+          latLngCenter = new google.maps.LatLng(markerCenter.position.lat(), markerCenter.position.lng());
+          markerCt = 0;
+          $('div.placeList').find('*').not('.header').not('.input').not('.icon').not('#filter').not('br').remove();
+             for (var i = 0; i < places.length; i++) {
+              countMarkers(places[i]);
+             }
+          infowindow.setContent(markerCt + ' Restaurants are here');
+          infowindow.open(map, this);
+        });
+
+
+      //routes
+      new AutocompleteDirectionsHandler(map);
+
+
+      }
+
+      var countMarkers = function (marker){
+        var placePosition = new google.maps.LatLng(marker.position.lat(), marker.position.lng());
+        bounds = circle.getBounds();
+        if (bounds.contains(placePosition) == true){
+            markerCt++;
+          searchVenue(marker.position.lat()+','+marker.position.lng(), marker.name, 1, marker.place_id);
+        }
+
+        infowindow.setContent(markerCt + ' Restaurants are here');
+        infowindow.open(map, markerCenter);
+        return markerCt;
+      }
+
+
+      function callback(results, status, pagination) {
+       var bounds = new google.maps.LatLngBounds();
+        markerCt = 0;
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+
+          for (var i = 0; i < results.length; i++) {
+            createMarker(results[i]);
+            countMarkers(places[i]);
+          }
+
+        }
+      }
+
+      function createMarker(place) {
+        var placesList = document.getElementById('places');
+
+        var icon = {
+          url: 'assets/img/marker.png',
+          scaledSize: new google.maps.Size(40, 40),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(0, 40)
+        };
+
+        var placeLoc = place.geometry.location;
+
+        marker = new google.maps.Marker({
+          map: map,
+          icon: icon,
+          position: place.geometry.location,
+          place_id: place.place_id
+        });
+
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.setContent(place.name);
+          infowindow.open(map, this);
+        });
+
+        // var li = document.createElement('li');
+        // li.textContent = place.name;
+        // placesList.appendChild(li);
+
+        places.push(marker);
+      }
+
+    </script>
+
+  </head>
+  <body>
+
+  <div class="ui top attached menu center aligned grid">
+
+    <div class="ui input" style="margin-top:4px;">
+      <input id="origin-input" class="controls" type="text"
+             placeholder="Enter an origin location">
+    </div>
+
+    <div class="ui input" style="margin-top:4px;">
+      <input id="destination-input" class="controls" type="text"
+             placeholder="Enter a destination location">
+    </div>
+      <div id="mode-selector" class="controls ui form">
+        <div class="inline fields">
+          <div class="field">
+            <div class="ui radio checkbox">
+              <input type="radio" name="type" id="changemode-walking" checked="checked">
+              <label for="changemode-walking">Walking</label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui radio checkbox">
+              <input type="radio" name="type" id="changemode-transit">
+              <label for="changemode-transit">Transit</label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="ui radio checkbox">
+              <input type="radio" name="type" id="changemode-driving">
+              <label for="changemode-driving">Driving</label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+  </div>
+  <div class="ui bottom attached segment">
+    <div class="ui left vertical labeled icon sidebar visible menu placeList" style="width: 500px !important;">
+
+      <br/>
+        <div class="ui icon input">
+        <input type="text" id="filter" name="type" onchange="filterMarkers(this.value);" placeholder="Enter Keyword to filter"/>
+          <i class="search icon"></i>
+        </div>
+
+      <div class="ui header" style="padding: 10px; padding-top: 10px;">Drag the center of the circle to start..</div>
+    </div>
+    <div class="pusher" style="width: 73%; height: 100%; left: 13%;">
+      <div class="ui basic segment" style="width: 100%; height: 100%;">
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+
+<div class="ui modal stats">
+  <i class="close icon"></i>
+  <div class="ui center aligned header">
+      Statistics
+  </div>
+  <div class="image content">
+    <div class="description">
+      <div id="chart_div" style="width: auto;; height: 500px;"></div>
+    </div>
+  </div>
+</div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDX2ObZrTnKR0ZdY4ojLwE3IskkzeHEMx0&libraries=places,geometry&callback=initMap" async defer></script>
+     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="assets/js/script.js"></script>
+  </body>
+</html>
